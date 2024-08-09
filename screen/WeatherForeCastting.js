@@ -13,7 +13,7 @@ import Snackbar from 'react-native-snackbar';
 import axios from 'axios';
 import { ModalLoader } from './components/ModalLoader';
 
-const WeatherGeter = () => {
+const WeatherForeCasting = () => {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [forecast, setForecast] = useState([]);
@@ -34,7 +34,7 @@ const WeatherGeter = () => {
   
     try {
       const response = await axios.get(
-        `http://api.openweathermap.org/geo/1.0/direct`,
+        `https://api.openweathermap.org/geo/1.0/direct`,
         {
           params: {
             q: query,
@@ -46,8 +46,8 @@ const WeatherGeter = () => {
       const data = response.data;
       console.log('Geocoding response data:', data);
   
-      if (response.status === 200 && data.length > 0) {
-        const { lat, lon } = data[0]; // Use the first result
+      if (data.length > 0) {
+        const { lat, lon } = data[0];
         fetchWeatherForecast(lat, lon);
       } else {
         throw new Error('City not found');
@@ -60,6 +60,7 @@ const WeatherGeter = () => {
   };
 
   const fetchWeatherForecast = async (lat, lon) => {
+    setLoading(true);
     try {
       const response = await axios.get(
         `https://api.openweathermap.org/data/2.5/forecast`,
@@ -69,23 +70,36 @@ const WeatherGeter = () => {
             lon: lon,
             appid: appId,
           },
-        },
+        }
       );
 
       const data = response.data;
       console.log('Forecast response data:', data);
 
-      if (response.status === 200) {
-        setForecast(data.list.slice(0, 4));
-      } else {
-        throw new Error(data.message || 'Failed to fetch weather forecast');
-      }
+      const groupedData = groupForecastByDate(data.list);
+      setForecast(groupedData);
     } catch (error) {
       handleFetchError(error);
+    }finally {
+      setLoading(false);
     }
   };
 
-  const handleFetchError = error => {
+  const groupForecastByDate = (list) => {
+    const forecastByDate = {};
+
+    list.forEach((item) => {
+      const date = item.dt_txt.split(' ')[0]; 
+
+      if (!forecastByDate[date]) {
+        forecastByDate[date] = item;
+      }
+    });
+
+    return Object.values(forecastByDate);
+  };
+  
+  const handleFetchError = (error) => {
     if (error.response && error.response.status === 404) {
       Snackbar.show({
         text: 'City not found. Please check the name and try again.',
@@ -122,17 +136,17 @@ const WeatherGeter = () => {
         </View>
         <View style={styles.secondRow}>
           <View style={{ alignSelf: 'center' }}>
-            <Text style={styles.label}>Temperature:</Text>
+            <Text style={styles.label}>Temperature</Text>
           </View>
         </View>
 
         <View style={styles.secondRow}>
           <View style={styles.rowHalf}>
-            <Text style={styles.label}>Min:</Text>
+            <Text style={styles.label}>Min</Text>
           </View>
           <View style={styles.verticalDivider} />
           <View style={styles.rowHalf}>
-            <Text style={styles.label}>Max:</Text>
+            <Text style={styles.label}>Max</Text>
           </View>
         </View>
         <View style={styles.secondRow}>
@@ -146,7 +160,7 @@ const WeatherGeter = () => {
         </View>
         <View style={styles.row}>
           <View style={styles.rowHalf}>
-            <Text style={styles.label}>Pressure:</Text>
+            <Text style={styles.label}>Pressure</Text>
           </View>
           <View style={styles.verticalDivider} />
           <View style={styles.rowHalf}>
@@ -155,7 +169,7 @@ const WeatherGeter = () => {
         </View>
         <View style={styles.row}>
           <View style={styles.rowHalf}>
-            <Text style={styles.label}>Humidity:</Text>
+            <Text style={styles.label}>Humidity</Text>
           </View>
           <View style={styles.verticalDivider} />
           <View style={styles.rowHalf}>
@@ -301,4 +315,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default WeatherGeter;
+export default WeatherForeCasting;
